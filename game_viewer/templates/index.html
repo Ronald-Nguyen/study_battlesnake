@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Battlesnake Game Viewer</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tournament, .matchup, .game { 
+            margin: 10px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            cursor: pointer; 
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .tournament:hover, .matchup:hover, .game:hover { 
+            background: #e8f4fd; 
+            border-color: #007bff;
+            transform: translateY(-1px);
+        }
+        .tournament {
+            background: #f0f8ff;
+            border-left: 4px solid #007bff;
+        }
+        .matchup {
+            background: #fff8dc;
+            border-left: 4px solid #ffc107;
+        }
+        .game {
+            background: #fff;
+            border-left: 4px solid #28a745;
+        }
+        .hidden { display: none; }
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            background: #5a6268;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-bottom: 20px; }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #007bff;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 8px;
+        }
+        .trueskill-ranking {
+            background: #f0fff0;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .trueskill-ranking ol {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Battlesnake Game Viewer</h1>
+        
+        <!-- Main view: Tournaments -->
+        <div id="tournaments-view">
+            <h2>Round-Robin Tournaments</h2>
+            <div id="tournament-list" class="loading">Loading tournaments...</div>
+        </div>
+        
+        <!-- Matchups view -->
+        <div id="matchups-view" class="hidden">
+            <button class="back-btn" onclick="goBackToTournaments()"><- Back to Tournaments</button>
+            <h2 id="tournament-title">Tournament Matchups</h2>
+            <div id="trueskill-summary"></div>
+            <div id="matchup-list" class="loading">Loading matchups...</div>
+        </div>
+        
+        <!-- Games view -->
+        <div id="games-view" class="hidden">
+            <button class="back-btn" onclick="goBackToMatchups()"><- Back to Matchups</button>
+            <h2 id="games-title">Games</h2>
+            <div id="game-list" class="loading">Loading games...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentTournamentId = null;
+        let currentMatchupId = null;
+
+        // Load tournaments on page load
+        loadTournaments();
+
+        function loadTournaments() {
+            fetch('/api/tournaments')
+                .then(r => r.json())
+                .then(data => {
+                    const tournamentList = document.getElementById('tournament-list');
+                    tournamentList.innerHTML = '';
+                    
+                    if (data.tournaments.length === 0) {
+                        tournamentList.innerHTML = '<div class="tournament">No tournaments found</div>';
+                    } else {
+                        data.tournaments.forEach(tournament => {
+                            const div = document.createElement('div');
+                            div.className = 'tournament';
+                            
+                            let trueskillHtml = '';
+                            if (tournament.trueskill && tournament.trueskill.rankings) {
+                                const top3 = tournament.trueskill.rankings.slice(0, 3);
+                                trueskillHtml = '<div class="trueskill-ranking"><strong>Rankings:</strong><ol>' + 
+                                    top3.map(r => `<li>${r.name} (skill: ${r.conservative_skill.toFixed(1)})</li>`).join('') +
+                                    '</ol></div>';
+                            }
+                            
+                            div.innerHTML = `
+                                <strong>${tournament.id}</strong>
+                                <span class="badge">${tournament.matchup_count} matchups</span>
+                                <span class="badge">${tournament.total_games} games</span>
+                                ${trueskillHtml}
+                            `;
+                            div.onclick = () => loadMatchups(tournament.id, tournament.trueskill);
+                            tournamentList.appendChild(div);
+                        });
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('tournament-list').innerHTML = 
+                        '<div class="tournament">Error loading tournaments: ' + err.message + '</div>';
+                });
+        }
+
+        function loadMatchups(tournamentId, trueskillData) {
+            currentTournamentId = tournamentId;
+            
+            document.getElementById('tournaments-view').classList.add('hidden');
+            document.getElementById('matchups-view').classList.remove('hidden');
+            document.getElementById('tournament-title').textContent = tournamentId;
+            
+            // Show full TrueSkill rankings if available
+            const trueskillDiv = document.getElementById('trueskill-summary');
+            if (trueskillData && trueskillData.rankings) {
+                let html = '<div class="trueskill-ranking"><strong>Final TrueSkill Rankings:</strong><ol>';
+                trueskillData.rankings.forEach(r => {
+                    html += `<li><strong>${r.name}</strong> - mu: ${r.mu.toFixed(2)}, sigma: ${r.sigma.toFixed(2)}, skill: ${r.conservative_skill.toFixed(2)}</li>`;
+                });
+                html += '</ol></div>';
+                trueskillDiv.innerHTML = html;
+            } else {
+                trueskillDiv.innerHTML = '';
+            }
+            
+            // Load matchups from tournament data
+            fetch('/api/tournaments')
+                .then(r => r.json())
+                .then(data => {
+                    const tournament = data.tournaments.find(t => t.id === tournamentId);
+                    if (!tournament) {
+                        throw new Error('Tournament not found');
+                    }
+                    
+                    const list = document.getElementById('matchup-list');
+                    list.innerHTML = '';
+                    
+                    tournament.matchups.forEach(matchup => {
+                        const div = document.createElement('div');
+                        div.className = 'matchup';
+                        div.innerHTML = `
+                            <strong>${matchup.name}</strong>
+                            <span class="badge">${matchup.game_count} games</span>
+                        `;
+                        div.onclick = () => loadTournamentGames(tournamentId, matchup.name);
+                        list.appendChild(div);
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('matchup-list').innerHTML = 
+                        '<div class="matchup">Error loading matchups: ' + err.message + '</div>';
+                });
+        }
+
+        function loadTournamentGames(tournamentId, matchupId) {
+            currentMatchupId = matchupId;
+            
+            document.getElementById('matchups-view').classList.add('hidden');
+            document.getElementById('games-view').classList.remove('hidden');
+            document.getElementById('games-title').textContent = `${matchupId}`;
+            
+            fetch(`/api/tournaments/${tournamentId}/matchups/${matchupId}/games`)
+                .then(r => r.json())
+                .then(games => {
+                    const list = document.getElementById('game-list');
+                    list.innerHTML = '';
+                    
+                    if (games.length === 0) {
+                        list.innerHTML = '<div class="game">No games found in this matchup</div>';
+                        return;
+                    }
+                    
+                    games.forEach(game => {
+                        const div = document.createElement('div');
+                        div.className = 'game';
+                        div.innerHTML = `
+                            <strong>${game.id}</strong><br>
+                            <small>Click to view in battlesnake board</small>
+                        `;
+                        div.onclick = () => viewTournamentGame(tournamentId, matchupId, game.id);
+                        list.appendChild(div);
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('game-list').innerHTML = 
+                        '<div class="game">Error loading games: ' + err.message + '</div>';
+                });
+        }
+
+        function viewTournamentGame(tournamentId, matchupId, gameId) {
+            // Format: tournament_id/matchup_id_gameId
+            const fullGameId = `${tournamentId}/${matchupId}_${gameId}`;
+            const boardUrl = `https://board.battlesnake.com/?engine=${window.location.origin}&game=${fullGameId}`;
+            window.open(boardUrl, '_blank');
+        }
+
+        function goBackToTournaments() {
+            document.getElementById('matchups-view').classList.add('hidden');
+            document.getElementById('tournaments-view').classList.remove('hidden');
+            currentTournamentId = null;
+        }
+
+        function goBackToMatchups() {
+            document.getElementById('games-view').classList.add('hidden');
+            document.getElementById('matchups-view').classList.remove('hidden');
+            currentMatchupId = null;
+        }
+    </script>
+</body>
+</html>

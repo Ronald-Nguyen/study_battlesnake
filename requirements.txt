@@ -1,0 +1,10 @@
+Flask
+sympy
+tqdm
+requests
+flask-cors
+flask-sock
+Werkzeug==2.2.2
+trueskill==0.4.5
+PyYAML
+pandas

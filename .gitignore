@@ -1,0 +1,50 @@
+# IDE
+.vscode
+.idea
+.claude
+.cursor
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+env/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Project specific
+tournaments/*
+slurm-*
+README_merge.md
+run_dev_tournament.sh
+*.log
+
+# Recording data
+record/data/*
+record/.cursor/
+
+# Config files with secrets
+eval/snapshot_config.json
+**/client_secrets.json
+**/mycreds.txt
+**/*.credentials
+
+# Other
+.tournament_slot_counter
+.init_uploaded
+data/*
+api
+.vercel
+

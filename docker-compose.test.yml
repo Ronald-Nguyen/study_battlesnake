@@ -1,0 +1,50 @@
+version: '3.3'
+services:
+  your_snake-service:
+    build: ./your_snake
+    ports:
+    - 7123:7123
+    environment:
+    - PORT=7123
+    - SNAKE_NAME=your_snake
+    container_name: your_snake-test
+  defensiveguardian-service:
+    build: ./example_snakes/DefensiveGuardian
+    ports:
+    - 7124:7124
+    environment:
+    - PORT=7124
+    - SNAKE_NAME=DefensiveGuardian
+    container_name: defensiveguardian-test
+  untimely-neglected-wearable-service:
+    build: ./example_snakes/untimely-neglected-wearable
+    ports:
+    - 7125:7125
+    environment:
+    - PORT=7125
+    - SNAKE_NAME=untimely-neglected-wearable
+    container_name: untimely-neglected-wearable-test
+  oliver-king-snake-service:
+    build: ./example_snakes/oliver-king-snake
+    ports:
+    - 7126:7126
+    environment:
+    - PORT=7126
+    - SNAKE_NAME=oliver-king-snake
+    container_name: oliver-king-snake-test
+  mikesnake-service:
+    build: ./example_snakes/MikeSnake
+    ports:
+    - 7127:7127
+    environment:
+    - PORT=7127
+    - SNAKE_NAME=MikeSnake
+    container_name: mikesnake-test
+  cardinalsnake-service:
+    build: ./example_snakes/CardinalSnake
+    ports:
+    - 7128:7128
+    environment:
+    - PORT=7128
+    - SNAKE_NAME=CardinalSnake
+    container_name: cardinalsnake-test
