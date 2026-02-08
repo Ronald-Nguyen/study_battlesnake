@@ -175,8 +175,48 @@ class SnakeBehavior:
                 if no food path is reachable then, the snake is maximizing it reachable area through flood fill
                 """
                 if largest_opponent:
-                    if largest_opponent[
-                            'length'] < my_size and largest_opponent:
+                    if largest_opponent['length'] < my_size - 1 and largest_opponent and game_state["you"]["health"] > 75 :
+
+                        kill_path = a_star.a_star_search((game_state["you"]["head"]["x"], game_state["you"]["head"]["y"]), (largest_opponent["head"]['x'], largest_opponent["head"]['y']), game_state["board"], game_state['board']['snakes'], my_id, largest_opponent['length'], my_size)
+                
+                        if kill_path:
+                            print("kill mode")
+                            next_move = kill_path[0]
+                        elif largest_opponent['length'] < my_size:
+                            for foods in sorted_foods:
+                                food_path = a_star.a_star_search(
+                                    (foods['x'], foods['y']),
+                                    (food_item['x'], food_item['y']),
+                                    game_state['board'],
+                                    game_state['board']['snakes'], my_id)
+                                food_tail_path = a_star.a_star_search(
+                                    (foods['x'], foods['y']),
+                                    (my_tail['x'], my_tail['y']),
+                                    game_state['board'],
+                                    game_state['board']['snakes'], my_id)
+                                if foods != food_item:
+                                    if not food_path and len(
+                                            sorted_foods
+                                    ) > 1 and not food_tail_path and my_path:
+                                        print("path not safe")
+                                        is_move_safe[my_path[0]] = False
+                                    else:
+                                        if my_path:
+                                            print("path size")
+                                            next_move = my_path[0]
+                                            break
+                        if my_path:
+                            print("path")
+                            next_move = my_path[0]
+
+                        elif my_path_tail:
+                            print("tail")
+                            next_move = my_path_tail[0]
+
+                        else:
+                            print("flood fill")
+                            next_move = max(move_options, key=move_options.get)
+                    else:
                         for foods in sorted_foods:
                             food_path = a_star.a_star_search(
                                 (foods['x'], foods['y']),
@@ -199,22 +239,17 @@ class SnakeBehavior:
                                         print("path size")
                                         next_move = my_path[0]
                                         break
-                                    else:
-                                        print("flood fill")
-                                        next_move = max(move_options,
-                                                        key=move_options.get)
-
                         if my_path:
                             print("path")
                             next_move = my_path[0]
 
-                    elif my_path_tail:
-                        print("tail")
-                        next_move = my_path_tail[0]
+                        elif my_path_tail:
+                            print("tail")
+                            next_move = my_path_tail[0]
 
-                    else:
-                        print("flood fill")
-                        next_move = max(move_options, key=move_options.get)
+                        else:
+                            print("flood fill")
+                            next_move = max(move_options, key=move_options.get)
 
         else:
             print("flood fill")

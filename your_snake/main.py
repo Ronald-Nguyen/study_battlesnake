@@ -15,7 +15,7 @@ class Snake:
         print("INFO")
         return {
             "apiversion": "1",
-            "author": "Gruppe 13",  
+            "author": "ronald",  
             "color": "#888888",  
             "head": "default",  
             "tail": "default",  
@@ -60,8 +60,8 @@ class Snake:
         my_tail = game_state["you"]["body"][-1]
         food = game_state['board']['food']
         move_options = {}
-    
-        
+
+
         #Method to prevent the snake to killing himself by going backwards
         SnakeBehavior.preventBack(is_move_safe, my_head, my_neck)
         
@@ -86,7 +86,8 @@ class Snake:
         
         print(f"MOVE {game_state['turn']}: {next_move}")
         return {"move": next_move}
-    
+
+
     if __name__ == "__main__":
         from server import run_server
     

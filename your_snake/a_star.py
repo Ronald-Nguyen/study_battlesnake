@@ -1,9 +1,9 @@
 import heapq
-
+from main import Snake
 class a_star :
 
     # A* search algorithm for pathfinding
-    def a_star_search(start, goal, board, snakes, my_snake_id):
+    def a_star_search(start, goal, board, snakes, my_snake_id, largest_opponent = 0, my_size = 0):
         def get_neighbors(node):
             neighbors = []
             directions = {'up': (0, 1), 'down': (0, -1), 'left': (-1, 0), 'right': (1, 0)}
@@ -17,6 +17,8 @@ class a_star :
             return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
         def cost(node):
+            if node == goal and largest_opponent < my_size:
+                return 1
             for snake in snakes:
                 snake_body = [(part['x'], part['y']) for part in snake['body']]
                 
