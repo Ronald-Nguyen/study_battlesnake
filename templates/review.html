@@ -50,7 +50,7 @@
 
         <div class="viewer">
             <div class="counter" id="counter"></div>
-            
+
             <div class="screenshot-container">
                 <img id="screenshot" class="screenshot" src="" alt="Screenshot">
             </div>
@@ -102,21 +102,21 @@
 
         function showScreenshot(index) {
             if (screenshots.length === 0) return;
-            
+
             currentIndex = Math.max(0, Math.min(index, screenshots.length - 1));
             const screenshot = screenshots[currentIndex];
-            
+
             document.getElementById('screenshot').src = `/api/screenshot/${screenshot.name}`;
             document.getElementById('counter').textContent = `Screenshot ${currentIndex + 1} of ${screenshots.length}`;
             document.getElementById('current-index').textContent = currentIndex + 1;
             document.getElementById('action-text').textContent = screenshot.action;
             document.getElementById('filename').textContent = screenshot.name;
             document.getElementById('filesize').textContent = `${screenshot.size_kb.toFixed(1)} KB`;
-            
+
             // Update button states
             document.getElementById('prev-btn').disabled = currentIndex === 0;
             document.getElementById('next-btn').disabled = currentIndex === screenshots.length - 1;
-            
+
             // Hide deleted notice
             document.getElementById('deleted-notice').style.display = 'none';
         }
@@ -127,28 +127,28 @@
 
         async function deleteScreenshot() {
             if (screenshots.length === 0) return;
-            
+
             const screenshot = screenshots[currentIndex];
-            
+
             if (!confirm(`Delete ${screenshot.name}?`)) {
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/delete/${screenshot.name}`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     // Show deleted notice
                     document.getElementById('deleted-notice').style.display = 'block';
-                    
+
                     // Remove from list
                     screenshots.splice(currentIndex, 1);
-                    
+
                     // Update stats
                     await updateStats();
-                    
+
                     // Show next screenshot or previous if at end
                     if (screenshots.length === 0) {
                         document.getElementById('counter').textContent = 'No screenshots remaining';
@@ -176,7 +176,8 @@
 
         function finishReview() {
             const remaining = screenshots.length;
-            const message = `Review complete!\n\nRemaining screenshots: ${remaining}\n\nNext step: Run 'python submit.py -s init --snake_name YOUR_NAME' to submit your snake and recordings`;
+            const message = `Review complete!\n\nRemaining screenshots: ${remaining}\n\n` +
+                `Next step: Run 'python submit.py -s init --snake_name YOUR_NAME' to submit`;
             alert(message);
             window.close();
         }

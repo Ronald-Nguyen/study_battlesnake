@@ -1,99 +1,98 @@
-# Welcome to
-# __________         __    __  .__                               __
-# \______   \_____ _/  |__/  |_|  |   ____   ______ ____ _____  |  | __ ____
-#  |    |  _/\__  \\   __\   __\  | _/ __ \ /  ___//    \\__  \ |  |/ // __ \
-#  |    |   \ / __ \|  |  |  | |  |_\  ___/ \___ \|   |  \/ __ \|    <\  ___/
-#  |________/(______/__|  |__| |____/\_____>______>___|__(______/__|__\\_____>
-#
-# This file can be a nice home for your Battlesnake logic and helper functions.
-#
-# To get you started we've included code to prevent your Battlesnake from moving backwards.
-# For more info see docs.battlesnake.com
 
 import random
 import typing
+from SnakeBehavior import*
 
 
-# info is called when you create your Battlesnake on play.battlesnake.com
-# and controls your Battlesnake's appearance
-# TIP: If you open your Battlesnake URL in a browser you should see this data
-def info() -> typing.Dict:
-    print("INFO")
+"""
+class to run the snake
+"""
+class Snake:    
+    def info() -> typing.Dict:
+        """
+        Returns information about the Battlesnake.
+        """
+        print("INFO")
+        return {
+            "apiversion": "1",
+            "author": "Gruppe 13",  
+            "color": "#888888",  
+            "head": "default",  
+            "tail": "default",  
+    
+        }
+    
+    def my_head(game_state: typing.Dict):
+        """
+        initialize the head of the snake at the start of the game
+        """
+        print("GAME my_head")
+    
+    def end(game_state: typing.Dict):
+        """
+        called at the end of the game to determine the end of the game
+        """
+        print("GAME OVER\n")
+    
+    
+    
+    def move(game_state: typing.Dict) -> typing.Dict:
+        """
+        Decides the next move for the snake
+        """
 
-    return {
-        "apiversion": "1",
-        "author": "",  # TODO: Your Battlesnake Username
-        "color": "#888888",  # TODO: Choose color
-        "head": "default",  # TODO: Choose head
-        "tail": "default",  # TODO: Choose tail
-    }
+        #Intializing all important attributes
+        is_move_safe = {
+              "up": True, 
+              "down": True, 
+              "left": True, 
+              "right": True
+            }
+        my_head = game_state["you"]["body"][0]
+        my_neck = game_state["you"]["body"][1]
+        my_size = game_state[ "you"]["length"] 
+        my_id = game_state["you"]["id"]
+        board_width = game_state['board']['width']
+        board_height = game_state['board']['height']
+        my_body = game_state['you']['body']
+        opponents = [snake for snake in game_state['board']['snakes'] if snake['id'] != my_id]
+        largest_opponent = max(opponents, key=lambda snake: snake['length'], default = None)
+        my_tail = game_state["you"]["body"][-1]
+        food = game_state['board']['food']
+        move_options = {}
+    
+        
+        #Method to prevent the snake to killing himself by going backwards
+        SnakeBehavior.preventBack(is_move_safe, my_head, my_neck)
+        
+        #Method to prevent the snake to moving out of bounds   
+        SnakeBehavior.preventOutOfBounds(is_move_safe, my_head, board_width, board_height)
 
+        #Method to prevent the snake to collide with itself
+        SnakeBehavior.preventSelfCollision(is_move_safe, my_body, my_head)
 
-# start is called when your Battlesnake begins a game
-def start(game_state: typing.Dict):
-    print("GAME START")
+        #Method to prevent the snake to collide with other snakes
+        SnakeBehavior.preventCollision(is_move_safe, opponents, my_head)
 
+        #Initialize all safe_moves
+        safe_moves = [move for move, isSafe in is_move_safe.items() if isSafe]
 
-# end is called when your Battlesnake finishes a game
-def end(game_state: typing.Dict):
-    print("GAME OVER\n")
+        #determine move options through flood fill
+        SnakeBehavior.determine_move_options(safe_moves, my_head, board_width, board_height, my_body, opponents, game_state, move_options)
 
-
-# move is called on every turn and returns your next move
-# Valid moves are "up", "down", "left", or "right"
-# See https://docs.battlesnake.com/api/example-move for available data
-def move(game_state: typing.Dict) -> typing.Dict:
-
-    is_move_safe = {"up": True, "down": True, "left": True, "right": True}
-
-    # We've included code to prevent your Battlesnake from moving backwards
-    my_head = game_state["you"]["body"][0]  # Coordinates of your head
-    my_neck = game_state["you"]["body"][1]  # Coordinates of your "neck"
-
-    if my_neck["x"] < my_head["x"]:  # Neck is left of head, don't move left
-        is_move_safe["left"] = False
-
-    elif my_neck["x"] > my_head["x"]:  # Neck is right of head, don't move right
-        is_move_safe["right"] = False
-
-    elif my_neck["y"] < my_head["y"]:  # Neck is below head, don't move down
-        is_move_safe["down"] = False
-
-    elif my_neck["y"] > my_head["y"]:  # Neck is above head, don't move up
-        is_move_safe["up"] = False
-
-    # TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-    # board_width = game_state['board']['width']
-    # board_height = game_state['board']['height']
-
-    # TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-    # my_body = game_state['you']['body']
-
-    # TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-    # opponents = game_state['board']['snakes']
-
-    # Are there any safe moves left?
-    safe_moves = []
-    for move, isSafe in is_move_safe.items():
-        if isSafe:
-            safe_moves.append(move)
-
-    if len(safe_moves) == 0:
-        print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
-        return {"move": "down"}
-
-    # Choose a random move from the safe ones
-    next_move = random.choice(safe_moves)
-
-    # TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-    # food = game_state['board']['food']
-
-    print(f"MOVE {game_state['turn']}: {next_move}")
-    return {"move": next_move}
-
-
-# Start server when `python main.py` is run
-if __name__ == "__main__":
-    from server import run_server
-
-    run_server({"info": info, "start": start, "move": move, "end": end})
+        #determine next move
+        next_move = SnakeBehavior.determine_next_move(food, my_head, game_state, my_size, my_tail, my_id, is_move_safe, largest_opponent, opponents, move_options)
+    
+        
+        print(f"MOVE {game_state['turn']}: {next_move}")
+        return {"move": next_move}
+    
+    if __name__ == "__main__":
+        from server import run_server
+    
+        run_server({
+            "info": info, 
+            "my_head": my_head, 
+            "move": move, 
+            "end": end
+        })
