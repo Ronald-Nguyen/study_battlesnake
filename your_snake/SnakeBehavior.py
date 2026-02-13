@@ -114,10 +114,9 @@ class SnakeBehavior:
                 for part in my_body[:-1]:
                     obstacles.add((part["x"], part["y"]))
 
-            accessible_area = flood_fill.flood_fill(game_state['board'],
-                                                    new_head[0], new_head[1],
-                                                    board_width, board_height,
-                                                    obstacles)
+            accessible_area = flood_fill(game_state['board'], new_head[0],
+                                          new_head[1], board_width,
+                                          board_height, obstacles)
             move_options[move] = accessible_area
 
     def determine_next_move(game_state):
@@ -199,8 +198,8 @@ class SnakeBehavior:
             if opponent and next_head in opponent_next and opponent["length"] >= my_length:
                 continue
 
-            space = flood_fill.flood_fill(board, next_head[0], next_head[1],
-                                          width, height, blocked)
+            space = flood_fill(board, next_head[0], next_head[1], width,
+                               height, blocked)
             if space < my_length + 5:
                 continue
 
@@ -245,9 +244,9 @@ class SnakeBehavior:
                     opp_blocked.discard((opp_head["x"], opp_head["y"]))
                     opp_blocked.add(next_head)
 
-                    opp_space = flood_fill.flood_fill(board, opp_head["x"],
-                                                      opp_head["y"], width,
-                                                      height, opp_blocked)
+                    opp_space = flood_fill(board, opp_head["x"],
+                                            opp_head["y"], width, height,
+                                            opp_blocked)
                     if (opp_space < opponent.get("length", 0) + 3 and
                             space >= my_length + 8):
                         score += 200.0
