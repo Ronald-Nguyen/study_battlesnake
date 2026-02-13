@@ -121,173 +121,146 @@ class SnakeBehavior:
                                                     obstacles)
             move_options[move] = accessible_area
 
-    def determine_next_move(food, my_head, game_state, my_size, my_tail, my_id,
-                            is_move_safe, largest_opponent, opponents,
-                            move_options):
+    def determine_next_move(game_state):
         """
-        This method determines the snake's next move by pathfinding to the nearest food using A* search. 
-        It iterates through all foods to check if any other snake has a shorter path to them. 
-        If every food can be reached faster, then the snake is looping around itself.
-        If no food is reachable, the snake maximizes its accessible area on the board.
+        Single scoring-based move policy for duel mode.
         """
+        board = game_state.get("board", {})
+        width = board.get("width", 0)
+        height = board.get("height", 0)
+        my_snake = game_state.get("you", {})
+        my_id = my_snake.get("id")
+        my_body = my_snake.get("body", [])
+        if width <= 0 or height <= 0 or not my_body:
+            return "up"
 
-        next_move = None
+        my_head = my_body[0]
+        my_tail = my_body[-1]
+        my_length = my_snake.get("length", len(my_body))
+        my_health = my_snake.get("health", 100)
+        food = board.get("food", [])
+        food_positions = {(f.get("x"), f.get("y")) for f in food
+                          if "x" in f and "y" in f}
 
-        #Initializing the path to tail of the snake to make the snake looping and avoid self-trapping
-        my_path_tail = a_star.a_star_search(
-            (my_head['x'], my_head['y']), (my_tail['x'], my_tail['y']),
-            game_state['board'], game_state['board']['snakes'], my_id)
+        snakes = board.get("snakes", [])
+        opponents = [snake for snake in snakes if snake.get("id") != my_id]
+        opponent = opponents[0] if opponents else None
 
-        if food:
-            #sort food items by distance to  the snake's head
-            sorted_foods = sorted(food,
-                                  key=lambda f: abs(f['x'] - my_head['x']) +
-                                  abs(f['y'] - my_head['y']))
+        move_deltas = {
+            "up": (0, 1),
+            "down": (0, -1),
+            "left": (-1, 0),
+            "right": (1, 0),
+        }
 
-            # Iterate through each food to find the closest and safest path with A* search
-            for food_item in sorted_foods:
-                my_path = a_star.a_star_search(
-                    (my_head['x'], my_head['y']),
-                    (food_item['x'], food_item['y']), game_state['board'],
-                    game_state['board']['snakes'], my_id)
-                if not my_path:
-                    continue
-                closest_food = True
+        def in_bounds(x, y):
+            return 0 <= x < width and 0 <= y < height
 
-                # check paths of each oppenent for the same food item
-                for opponent in opponents:
-                    opponent_path = a_star.a_star_search(
-                        (opponent["head"]["x"], opponent["head"]["y"]),
-                        (food_item['x'], food_item['y']), game_state['board'],
-                        game_state['board']['snakes'], my_id)
-                    if not opponent_path:
+        def manhattan(a, b):
+            return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+        def build_blocked(next_head):
+            eating = next_head in food_positions
+            blocked = set()
+            for snake in snakes:
+                snake_id = snake.get("id")
+                for part in snake.get("body", []):
+                    if "x" not in part or "y" not in part:
                         continue
-                    if len(opponent_path) < len(my_path) or (
-                            len(opponent_path) == len(my_path)
-                            and my_size <= opponent["length"]):
-                        closest_food = False
-                        break
+                    coord = (part["x"], part["y"])
+                    if snake_id == my_id:
+                        if coord == (my_tail.get("x"), my_tail.get("y")) and not eating:
+                            continue
+                    blocked.add(coord)
+            return blocked, eating
 
-                if closest_food:
-                    # check if there is a safe path from the food item to the tail
-                    food_tail_path = a_star.a_star_search(
-                        (food_item['x'], food_item['y']),
-                        (my_tail['x'], my_tail['y']), game_state['board'],
-                        game_state['board']['snakes'], my_id)
-                    if len(sorted_foods) == 1 and food_tail_path:
-                        print("path")
-                        next_move = my_path[0]
-                        break
+        opponent_next = set()
+        if opponent and "head" in opponent:
+            opp_head = opponent["head"]
+            for dx, dy in move_deltas.values():
+                if "x" in opp_head and "y" in opp_head:
+                    nx, ny = opp_head["x"] + dx, opp_head["y"] + dy
+                    if in_bounds(nx, ny):
+                        opponent_next.add((nx, ny))
 
-                    # check if another food is reachable from the food item
-                    for foods in sorted_foods:
-                        food_path = a_star.a_star_search(
-                            (foods['x'], foods['y']),
-                            (food_item['x'], food_item['y']),
-                            game_state['board'], game_state['board']['snakes'],
-                            my_id)
-                        if foods != food_item:
-                            if not food_path and len(sorted_foods) > 1:
-                                if my_path:
-                                    print("path not safe")
-                                    is_move_safe[my_path[0]] = False
-                            else:
-                                if my_path:
-                                    print("path")
-                                    next_move = my_path[0]
-                                    break
-                    else:
-                        continue
-                    break
+        center_x = (width - 1) / 2.0
+        center_y = (height - 1) / 2.0
+        best_move = "up"
+        best_score = float("-inf")
 
-            else:
-                """
-                if no food path is safe but my snake is the strongest, then the snake is doing A* pathfinding to the food
-                if no food path is reachable then, the snake is maximizing it reachable area through flood fill
-                """
-                if largest_opponent:
-                    if largest_opponent['length'] < my_size - 1 and largest_opponent and game_state["you"]["health"] > 75 :
+        for move, (dx, dy) in move_deltas.items():
+            next_head = (my_head["x"] + dx, my_head["y"] + dy)
+            if not in_bounds(next_head[0], next_head[1]):
+                continue
 
-                        kill_path = a_star.a_star_search((game_state["you"]["head"]["x"], game_state["you"]["head"]["y"]), (largest_opponent["head"]['x'], largest_opponent["head"]['y']), game_state["board"], game_state['board']['snakes'], my_id, largest_opponent['length'], my_size)
-                
-                        if kill_path:
-                            print("kill mode")
-                            next_move = kill_path[0]
-                        elif largest_opponent['length'] < my_size:
-                            for foods in sorted_foods:
-                                food_path = a_star.a_star_search(
-                                    (foods['x'], foods['y']),
-                                    (food_item['x'], food_item['y']),
-                                    game_state['board'],
-                                    game_state['board']['snakes'], my_id)
-                                food_tail_path = a_star.a_star_search(
-                                    (foods['x'], foods['y']),
-                                    (my_tail['x'], my_tail['y']),
-                                    game_state['board'],
-                                    game_state['board']['snakes'], my_id)
-                                if foods != food_item:
-                                    if not food_path and len(
-                                            sorted_foods
-                                    ) > 1 and not food_tail_path and my_path:
-                                        print("path not safe")
-                                        is_move_safe[my_path[0]] = False
-                                    else:
-                                        if my_path:
-                                            print("path size")
-                                            next_move = my_path[0]
-                                            break
-                        if my_path:
-                            print("path")
-                            next_move = my_path[0]
+            blocked, eating = build_blocked(next_head)
+            if next_head in blocked:
+                continue
 
-                        elif my_path_tail:
-                            print("tail")
-                            next_move = my_path_tail[0]
+            if opponent and next_head in opponent_next and opponent["length"] >= my_length:
+                continue
 
+            space = flood_fill.flood_fill(board, next_head[0], next_head[1],
+                                          width, height, blocked)
+            if space < my_length + 5:
+                continue
+
+            score = float(space) * 4.0
+
+            if food_positions:
+                if my_health < 35:
+                    nearest_food = min(
+                        manhattan(next_head, food_pos)
+                        for food_pos in food_positions
+                    )
+                    score += max(0.0, 10.0 - float(nearest_food))
+                    if next_head in food_positions:
+                        score += 30.0
+                else:
+                    if next_head in food_positions:
+                        if space >= my_length + 7:
+                            score += 5.0
                         else:
-                            print("flood fill")
-                            next_move = max(move_options, key=move_options.get)
-                    else:
-                        for foods in sorted_foods:
-                            food_path = a_star.a_star_search(
-                                (foods['x'], foods['y']),
-                                (food_item['x'], food_item['y']),
-                                game_state['board'],
-                                game_state['board']['snakes'], my_id)
-                            food_tail_path = a_star.a_star_search(
-                                (foods['x'], foods['y']),
-                                (my_tail['x'], my_tail['y']),
-                                game_state['board'],
-                                game_state['board']['snakes'], my_id)
-                            if foods != food_item:
-                                if not food_path and len(
-                                        sorted_foods
-                                ) > 1 and not food_tail_path and my_path:
-                                    print("path not safe")
-                                    is_move_safe[my_path[0]] = False
-                                else:
-                                    if my_path:
-                                        print("path size")
-                                        next_move = my_path[0]
-                                        break
-                        if my_path:
-                            print("path")
-                            next_move = my_path[0]
+                            score -= 5.0
 
-                        elif my_path_tail:
-                            print("tail")
-                            next_move = my_path_tail[0]
+            if opponent and opponent.get("length", 0) < my_length and opponent_next:
+                if next_head in opponent_next:
+                    score += 15.0
+                else:
+                    for opp_pos in opponent_next:
+                        if manhattan(next_head, opp_pos) == 1:
+                            score += 5.0
+                            break
 
-                        else:
-                            print("flood fill")
-                            next_move = max(move_options, key=move_options.get)
+            if opponent and "head" in opponent:
+                opp_blocked = set()
+                for snake in snakes:
+                    for part in snake.get("body", []):
+                        if "x" not in part or "y" not in part:
+                            continue
+                        opp_blocked.add((part["x"], part["y"]))
+                if not eating:
+                    opp_blocked.discard((my_tail.get("x"), my_tail.get("y")))
+                opp_head = opponent["head"]
+                if "x" in opp_head and "y" in opp_head:
+                    opp_blocked.discard((opp_head["x"], opp_head["y"]))
+                    opp_blocked.add(next_head)
 
-        else:
-            print("flood fill")
-            next_move = max(move_options, key=move_options.get)
+                    opp_space = flood_fill.flood_fill(board, opp_head["x"],
+                                                      opp_head["y"], width,
+                                                      height, opp_blocked)
+                    if (opp_space < opponent.get("length", 0) + 3 and
+                            space >= my_length + 8):
+                        score += 200.0
 
-        if next_move is None:
-            print("flood fill")
-            next_move = max(move_options, key=move_options.get)
+            score -= manhattan(next_head, (center_x, center_y)) * 0.3
 
-        return next_move
+            if (next_head[0] == 0 or next_head[0] == width - 1 or
+                    next_head[1] == 0 or next_head[1] == height - 1):
+                score -= 3.0
+
+            if score > best_score:
+                best_score = score
+                best_move = move
+
+        return best_move
