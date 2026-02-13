@@ -183,17 +183,25 @@ class SnakeBehavior:
 
         center_x = (width - 1) / 2.0
         center_y = (height - 1) / 2.0
-        best_move = "up"
+        best_move = None
         best_score = float("-inf")
+        fallback_move = None
+        any_in_bounds = None
 
         for move, (dx, dy) in move_deltas.items():
             next_head = (my_head["x"] + dx, my_head["y"] + dy)
             if not in_bounds(next_head[0], next_head[1]):
                 continue
 
+            if any_in_bounds is None:
+                any_in_bounds = move
+
             blocked, eating = build_blocked(next_head)
             if next_head in blocked:
                 continue
+
+            if fallback_move is None:
+                fallback_move = move
 
             if opponent and next_head in opponent_next and opponent["length"] >= my_length:
                 continue
@@ -331,5 +339,12 @@ class SnakeBehavior:
             if score > best_score:
                 best_score = score
                 best_move = move
+
+        if best_move is None:
+            if fallback_move is not None:
+                return fallback_move
+            if any_in_bounds is not None:
+                return any_in_bounds
+            return "up"
 
         return best_move
