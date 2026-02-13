@@ -62,27 +62,58 @@ class SnakeBehavior:
                     if body_part["x"] == my_head["x"] + 1:
                         is_move_safe["right"] = False
 
+    def preventHeadToHead(is_move_safe, opponents, my_head, my_size):
+
+        # Avoid head-to-head squares if the opponent is equal or larger.
+        move_deltas = {
+            "up": (0, 1),
+            "down": (0, -1),
+            "left": (-1, 0),
+            "right": (1, 0),
+        }
+
+        for opponent in opponents:
+            if opponent["length"] < my_size:
+                continue
+            opp_head = opponent["head"]
+            opp_adjacent = {
+                (opp_head["x"] + dx, opp_head["y"] + dy)
+                for dx, dy in move_deltas.values()
+            }
+            for move, (dx, dy) in move_deltas.items():
+                new_head = (my_head["x"] + dx, my_head["y"] + dy)
+                if new_head in opp_adjacent:
+                    is_move_safe[move] = False
+
     def determine_move_options(safe_moves, my_head, board_width, board_height,
                                my_body, opponents, game_state, move_options):
 
         #Determines the move options based on safe moves and accessible area.
-        obstacles = set()
-        for part in my_body:
-            obstacles.add((part["x"], part["y"]))
+        base_obstacles = set()
         for opponent in opponents:
             for part in opponent["body"]:
-                obstacles.add((part["x"], part["y"]))
+                base_obstacles.add((part["x"], part["y"]))
+
+        food_positions = {(f["x"], f["y"]) for f in game_state["board"]["food"]}
 
         # Check each possible move using flood fill
         for move in safe_moves:
             if move == "up":
-                new_head = (my_head["x"], my_head["y"] - 1)
-            elif move == "down":
                 new_head = (my_head["x"], my_head["y"] + 1)
+            elif move == "down":
+                new_head = (my_head["x"], my_head["y"] - 1)
             elif move == "left":
                 new_head = (my_head["x"] - 1, my_head["y"])
             elif move == "right":
                 new_head = (my_head["x"] + 1, my_head["y"])
+
+            obstacles = set(base_obstacles)
+            if new_head in food_positions:
+                for part in my_body:
+                    obstacles.add((part["x"], part["y"]))
+            else:
+                for part in my_body[:-1]:
+                    obstacles.add((part["x"], part["y"]))
 
             accessible_area = flood_fill.flood_fill(game_state['board'],
                                                     new_head[0], new_head[1],

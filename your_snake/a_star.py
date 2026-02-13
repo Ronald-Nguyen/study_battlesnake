@@ -1,5 +1,4 @@
 import heapq
-from main import Snake
 class a_star :
 
     # A* search algorithm for pathfinding

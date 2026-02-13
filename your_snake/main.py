@@ -74,6 +74,9 @@ class Snake:
         #Method to prevent the snake to collide with other snakes
         SnakeBehavior.preventCollision(is_move_safe, opponents, my_head)
 
+        #Method to avoid head-to-head collisions against equal/larger snakes
+        SnakeBehavior.preventHeadToHead(is_move_safe, opponents, my_head, my_size)
+
         #Initialize all safe_moves
         safe_moves = [move for move, isSafe in is_move_safe.items() if isSafe]
 
