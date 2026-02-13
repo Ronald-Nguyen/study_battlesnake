@@ -22,11 +22,11 @@ class Snake:
     
         }
     
-    def my_head(game_state: typing.Dict):
+    def start(game_state: typing.Dict):
         """
         initialize the head of the snake at the start of the game
         """
-        print("GAME my_head")
+        print("GAME start")
     
     def end(game_state: typing.Dict):
         """
@@ -96,7 +96,7 @@ class Snake:
     
         run_server({
             "info": info, 
-            "my_head": my_head, 
+            "start": start, 
             "move": move, 
             "end": end
         })
