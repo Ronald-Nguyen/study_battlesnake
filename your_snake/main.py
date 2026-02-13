@@ -1,12 +1,13 @@
 
 import typing
-from SnakeBehavior import*
+from SnakeBehavior import SnakeBehavior
 
 
 """
 class to run the snake
 """
-class Snake:    
+class Snake:
+    @staticmethod
     def info() -> typing.Dict:
         """
         Returns information about the Battlesnake.
@@ -21,12 +22,14 @@ class Snake:
     
         }
     
+    @staticmethod
     def start(game_state: typing.Dict):
         """
         initialize the head of the snake at the start of the game
         """
         print("GAME start")
     
+    @staticmethod
     def end(game_state: typing.Dict):
         """
         called at the end of the game to determine the end of the game
@@ -35,6 +38,7 @@ class Snake:
     
     
     
+    @staticmethod
     def move(game_state: typing.Dict) -> typing.Dict:
         """
         Decides the next move for the snake
@@ -46,12 +50,12 @@ class Snake:
         return {"move": next_move}
 
 
-    if __name__ == "__main__":
-        from server import run_server
-    
-        run_server({
-            "info": info, 
-            "start": start, 
-            "move": move, 
-            "end": end
-        })
+if __name__ == "__main__":
+    from server import run_server
+
+    run_server({
+        "info": Snake.info,
+        "start": Snake.start,
+        "move": Snake.move,
+        "end": Snake.end,
+    })

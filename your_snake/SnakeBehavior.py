@@ -221,6 +221,38 @@ class SnakeBehavior:
                         else:
                             score -= 5.0
 
+            if opponent and food_positions:
+                opp_len = opponent.get("length", 0)
+                if opp_len >= my_length and space >= my_length + 8:
+                    opp_head = opponent.get("head", {})
+                    opp_head_pos = (opp_head.get("x"), opp_head.get("y"))
+                    if opp_head_pos[0] is not None and opp_head_pos[1] is not None:
+                        best_race = 0.0
+                        for food_pos in food_positions:
+                            my_d = manhattan(next_head, food_pos)
+                            opp_d = manhattan(opp_head_pos, food_pos)
+                            if my_d < opp_d:
+                                best_race = max(
+                                    best_race,
+                                    max(0.0, 40.0 - 2.0 * float(my_d)),
+                                )
+                            elif my_d == opp_d:
+                                best_race = max(
+                                    best_race,
+                                    10.0 if opp_len > my_length else 4.0,
+                                )
+                        score += best_race
+
+            if opponent and food_positions and space >= my_length + 8:
+                opp_head = opponent.get("head", {})
+                ox, oy = opp_head.get("x"), opp_head.get("y")
+                if ox is not None and oy is not None:
+                    target = min(food_positions, key=lambda f: manhattan((ox, oy), f))
+                    my_to_target = manhattan(next_head, target)
+                    opp_to_target = manhattan((ox, oy), target)
+                    if opp_to_target < my_to_target:
+                        score += max(0.0, 9.0 - float(my_to_target)) * 2.5
+
             if opponent and opponent.get("length", 0) < my_length and opponent_next:
                 if next_head in opponent_next:
                     score += 15.0
@@ -241,6 +273,19 @@ class SnakeBehavior:
                     opp_blocked.discard((my_tail.get("x"), my_tail.get("y")))
                 opp_head = opponent["head"]
                 if "x" in opp_head and "y" in opp_head:
+                    opp_tail = None
+                    if opponent.get("body"):
+                        opp_tail = opponent["body"][-1]
+                    opp_adjacent_food = False
+                    if food_positions:
+                        for dx, dy in move_deltas.values():
+                            adj = (opp_head["x"] + dx, opp_head["y"] + dy)
+                            if adj in food_positions:
+                                opp_adjacent_food = True
+                                break
+                    if opp_tail and not opp_adjacent_food:
+                        opp_blocked.discard((opp_tail.get("x"), opp_tail.get("y")))
+
                     opp_blocked.discard((opp_head["x"], opp_head["y"]))
                     opp_blocked.add(next_head)
 
@@ -250,6 +295,32 @@ class SnakeBehavior:
                     if (opp_space < opponent.get("length", 0) + 3 and
                             space >= my_length + 8):
                         score += 200.0
+
+            if opponent and food_positions and space >= my_length + 8:
+                opp_head = opponent.get("head", {})
+                if "x" in opp_head and "y" in opp_head:
+                    opp_head_pos = (opp_head["x"], opp_head["y"])
+                    opp_len = opponent.get("length", 0)
+                    if opp_len >= my_length:
+                        best_race = 0.0
+                        for food_pos in food_positions:
+                            my_d = manhattan(next_head, food_pos)
+                            opp_d = manhattan(opp_head_pos, food_pos)
+                            if my_d < opp_d:
+                                best_race = max(best_race, 40.0 - 2.0 * my_d)
+                            elif my_d == opp_d:
+                                if my_length < opp_len:
+                                    best_race = max(best_race, 8.0)
+                                else:
+                                    best_race = max(best_race, 3.0)
+                        score += best_race
+
+                    target_food = min(
+                        food_positions,
+                        key=lambda pos: manhattan(opp_head_pos, pos),
+                    )
+                    deny_dist = manhattan(next_head, target_food)
+                    score += max(0.0, 8.0 - float(deny_dist)) * 2.0
 
             score -= manhattan(next_head, (center_x, center_y)) * 0.3
 
