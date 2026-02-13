@@ -1,5 +1,4 @@
 from flood_fill import flood_fill
-from a_star import a_star
 
 
 class SnakeBehavior:
